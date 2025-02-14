@@ -25,27 +25,31 @@ local ShapeMeta = {
             elseif type(value) == "table" and #value == 3 then
                 self._props[key] = value
             end
-            self._object.OutlineColor = Color3.fromRGB(unpack(self._props[key]))
+            self._outlineObject.Color = Color3.fromRGB(unpack(self._props[key]))
         elseif key == "thickness" then
             self._props[key] = math.clamp(value, 1, 10)
             self._object.Thickness = self._props[key]
         elseif key == "outlinethickness" then
             self._props[key] = math.clamp(value, 1, 10)
+            self._outlineObject.Thickness = self._props[key] + self._props.thickness
         elseif key == "outline" then
             self._props[key] = value
-            self._object.Outline = value
+            self._outlineObject.Visible = value
         elseif key == "visible" then
             self._props[key] = value
             self._object.Visible = value
+            self._outlineObject.Visible = value and self._props.outline
         elseif key == "position" then
             self._props[key] = value
             if self._object.Position then
                 self._object.Position = value
+                self._outlineObject.Position = value
             end
         elseif key == "size" then
             self._props[key] = value
             if self._object.Size then
                 self._object.Size = value
+                self._outlineObject.Size = value + Vector2.new(self._props.outlinethickness, self._props.outlinethickness)
             end
         else
             rawset(self._props, key, value)
@@ -55,8 +59,13 @@ local ShapeMeta = {
 
 local function createShape(shapeType)
     local obj = Drawing.new(shapeType)
+    local outlineObj = Drawing.new(shapeType)
+    outlineObj.Transparency = 1
+    outlineObj.ZIndex = obj.ZIndex - 1
+
     local shape = {
         _object = obj,
+        _outlineObject = outlineObj,
         _props = {
             visible = true,
             color = {255, 255, 255},
