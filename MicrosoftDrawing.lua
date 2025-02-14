@@ -29,9 +29,10 @@ local ShapeMeta = {
         elseif key == "thickness" then
             self._props[key] = math.clamp(value, 1, 10)
             self._object.Thickness = self._props[key]
+            self._outlineObject.Thickness = self._props[key] + self._props.outlinethickness
         elseif key == "outlinethickness" then
             self._props[key] = math.clamp(value, 1, 10)
-            self._outlineObject.Thickness = self._props[key]
+            self._outlineObject.Thickness = self._props.thickness + self._props[key]
         elseif key == "outline" then
             self._props[key] = value
             self._outlineObject.Visible = value
@@ -42,7 +43,7 @@ local ShapeMeta = {
         elseif key == "position" then
             self._props[key] = value
             self._object.Position = value
-            self._outlineObject.Position = value - Vector2.new(self._props.outlinethickness / 2, self._props.outlinethickness / 2)
+            self._outlineObject.Position = value
         elseif key == "size" then
             self._props[key] = value
             self._object.Size = value
@@ -54,6 +55,7 @@ local ShapeMeta = {
         elseif key == "transparency" then
             self._props[key] = value
             self._object.Transparency = value
+            self._outlineObject.Transparency = value
         else
             rawset(self._props, key, value)
         end
@@ -63,8 +65,10 @@ local ShapeMeta = {
 local function createShape(shapeType)
     local obj = Drawing.new(shapeType)
     local outlineObj = Drawing.new(shapeType)
-    outlineObj.Transparency = 1
     outlineObj.ZIndex = obj.ZIndex - 1
+    outlineObj.Color = Color3.new(0, 0, 0)
+    outlineObj.Thickness = obj.Thickness + 1
+    outlineObj.Visible = false
 
     local shape = {
         _object = obj,
