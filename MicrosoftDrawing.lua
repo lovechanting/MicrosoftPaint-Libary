@@ -12,82 +12,77 @@ local ShapeMeta = {
         return rawget(self._props, key)
     end,
     __newindex = function(self, key, value)
+        local props, obj, outline = self._props, self._object, self._outlineObject
+        
         if key == "color" then
-            if type(value) == "string" then
-                self._props[key] = {hexToRGB(value)}
-            elseif type(value) == "table" and #value == 3 then
-                self._props[key] = value
-            end
-            self._object.Color = Color3.fromRGB(unpack(self._props[key]))
+            props[key] = type(value) == "string" and {hexToRGB(value)} or value
+            obj.Color = Color3.fromRGB(unpack(props[key]))
         elseif key == "outlinecolor" then
-            if type(value) == "string" then
-                self._props[key] = {hexToRGB(value)}
-            elseif type(value) == "table" and #value == 3 then
-                self._props[key] = value
-            end
-            self._outlineObject.Color = Color3.fromRGB(unpack(self._props[key]))
+            props[key] = type(value) == "string" and {hexToRGB(value)} or value
+            outline.Color = Color3.fromRGB(unpack(props[key]))
         elseif key == "thickness" then
-            self._props[key] = math.clamp(value, 1, 10)
-            self._object.Thickness = self._props[key]
-            self._outlineObject.Thickness = self._props[key] + self._props.outlinethickness
+            props[key] = math.clamp(value, 1, 10)
+            obj.Thickness = props[key]
+            outline.Thickness = props[key] + props.outlinethickness
         elseif key == "outlinethickness" then
-            self._props[key] = math.clamp(value, 1, 10)
-            self._outlineObject.Thickness = self._props.thickness + self._props[key]
+            props[key] = math.clamp(value, 1, 10)
+            outline.Thickness = props.thickness + props[key]
         elseif key == "outline" then
-            self._props[key] = value
-            self._outlineObject.Visible = value
+            props[key] = value
+            outline.Visible = value
         elseif key == "visible" then
-            self._props[key] = value
-            self._object.Visible = value
-            self._outlineObject.Visible = value and self._props.outline
+            props[key] = value
+            obj.Visible, outline.Visible = value, value and props.outline
         elseif key == "position" then
-            self._props[key] = value
-            self._object.Position = value
-            self._outlineObject.Position = value
+            props[key] = value
+            obj.Position, outline.Position = value, value
         elseif key == "size" then
-            self._props[key] = value
-            self._object.Size = value
-            self._outlineObject.Size = value + Vector2.new(self._props.outlinethickness, self._props.outlinethickness)
+            if not props.scalelock then
+                props[key] = value
+                obj.Size = value
+                outline.Size = value + Vector2.new(props.outlinethickness, props.outlinethickness)
+            end
         elseif key == "zindex" then
-            self._props[key] = value
-            self._object.ZIndex = value
-            self._outlineObject.ZIndex = value - 1
+            props[key] = value
+            obj.ZIndex, outline.ZIndex = value, value - 1
         elseif key == "transparency" then
-            self._props[key] = value
-            self._object.Transparency = value
-            self._outlineObject.Transparency = value
+            props[key] = value
+            obj.Transparency, outline.Transparency = value, value
         elseif key == "borderradius" then
-            self._props[key] = math.clamp(value, 0, 50)
-            self._object.Radius = self._props[key]
+            props[key] = math.clamp(value, 0, 50)
+            obj.Radius = props[key]
         elseif key == "animation" then
-            self._props[key] = value
+            props[key] = value
             if value then
-                spawn(function()
-                    while self._props.animation do
-                        self._object.Transparency = math.abs(math.sin(tick() * 2))
-                        wait(0.05)
+                task.spawn(function()
+                    while props.animation do
+                        obj.Transparency = math.abs(math.sin(os.clock() * 2))
+                        task.wait(0.05)
                     end
                 end)
             end
         elseif key == "scalelock" then
-            self._props[key] = value
+            props[key] = value
+            if value then
+                props.originalSize = props.size
+            end
+        elseif key == "filltransparency" then
+            props[key] = value
+            obj.Filled = value < 1
+            obj.Transparency = value
         else
-            rawset(self._props, key, value)
+            rawset(props, key, value)
         end
     end
 }
 
 local function createShape(shapeType)
-    local obj = Drawing.new(shapeType)
-    local outlineObj = Drawing.new(shapeType)
-    outlineObj.ZIndex = obj.ZIndex - 1
-    outlineObj.Color = Color3.new(0, 0, 0)
-    outlineObj.Thickness = obj.Thickness + 1
-    outlineObj.Visible = false
-
+    local obj, outline = Drawing.new(shapeType), Drawing.new(shapeType)
+    outline.ZIndex, outline.Color, outline.Thickness, outline.Visible = obj.ZIndex - 1, Color3.new(0, 0, 0), obj.Thickness + 1, false
+    
     local shape = {
         _object = obj,
-        _outlineObject = outlineObj,
+        _outlineObject = outline,
         _props = {
             visible = true,
             color = {255, 255, 255},
@@ -101,7 +96,8 @@ local function createShape(shapeType)
             transparency = 1,
             borderradius = 0,
             animation = false,
-            scalelock = false
+            scalelock = false,
+            filltransparency = 0
         }
     }
     setmetatable(shape, ShapeMeta)
