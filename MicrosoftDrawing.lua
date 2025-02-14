@@ -16,6 +16,30 @@ local function hexToRGB(hex)
 end
 
 local players = {}
+local renderDistance = 200
+
+local function createLocalPlayerEffect()
+    local circle = MicrosoftPaint.Draw("Circle")
+    circle.size = Vector2.new(50, 50)
+    circle.position = Vector2.new(0, 0)
+    circle.color = {255, 0, 0}
+    circle.animation = true
+    task.spawn(function()
+        while true do
+            local time = os.clock()
+            local scale = math.sin(time * 2) * 10 + 50
+            circle.size = Vector2.new(scale, scale)
+            local r = math.abs(math.sin(time * 1)) * 255
+            local g = math.abs(math.sin(time * 2)) * 255
+            local b = math.abs(math.sin(time * 3)) * 255
+            circle.color = {r, g, b}
+            task.wait(0.05)
+        end
+    end)
+    return circle
+end
+
+local localPlayerEffect = createLocalPlayerEffect()
 
 local ShapeMeta = {
     __index = function(self, key)
@@ -34,56 +58,21 @@ local ShapeMeta = {
             end
             local colorObj = Color3.fromRGB(unpack(props[key]))
             if key == "color" then obj.Color = colorObj else outline.Color = colorObj end
-        elseif key == "thickness" then
-            props[key] = math.clamp(value, 1, 10)
-            obj.Thickness = props[key]
-            outline.Thickness = props[key] + props.outlinethickness
-        elseif key == "outlinethickness" then
-            props[key] = math.clamp(value, 1, 10)
-            outline.Thickness = props.thickness + props[key]
-        elseif key == "outline" then
-            props[key] = value
-            outline.Visible = value
-        elseif key == "visible" then
-            props[key] = value
-            obj.Visible, outline.Visible = value, value and props.outline
         elseif key == "position" then
-            props[key] = value
-            obj.Position, outline.Position = value, value
-        elseif key == "size" then
-            if not props.scalelock then
+            if props.scalelock and props.player and players[props.player] then
+                props[key] = players[props.player].Position
+            else
                 props[key] = value
-                obj.Size = value
-                outline.Size = value + Vector2.new(props.outlinethickness, props.outlinethickness)
             end
-        elseif key == "zindex" then
-            props[key] = value
-            obj.ZIndex, outline.ZIndex = value, value - 1
-        elseif key == "transparency" then
-            props[key] = value
-            obj.Transparency, outline.Transparency = value, value
-        elseif key == "borderradius" then
-            props[key] = math.clamp(value, 0, 50)
-            obj.Radius = props[key]
-        elseif key == "animation" then
-            props[key] = value
-            if value then
-                task.spawn(function()
-                    while props.animation do
-                        obj.Transparency = math.abs(math.sin(os.clock() * 2))
-                        task.wait(0.05)
-                    end
-                end)
+            obj.Position, outline.Position = props[key], props[key]
+        elseif key == "size" then
+            if props.scalelock and props.player and players[props.player] then
+                props[key] = players[props.player].Size
+            else
+                props[key] = value
             end
-        elseif key == "scalelock" then
-            props[key] = value
-            if value then
-                props.originalSize = props.size
-            end
-        elseif key == "filltransparency" then
-            props[key] = value
-            obj.Filled = value < 1
-            obj.Transparency = value
+            obj.Size = props[key]
+            outline.Size = props[key] + Vector2.new(props.outlinethickness, props.outlinethickness)
         elseif key == "player" then
             props[key] = value
             if value and players[value] then
