@@ -61,12 +61,14 @@ local ShapeMeta = {
             self._object.Radius = self._props[key]
         elseif key == "animation" then
             self._props[key] = value
-            spawn(function()
-                while self._props.animation do
-                    self._object.Transparency = math.abs(math.sin(tick() * 2))
-                    wait(0.05)
-                end
-            end)
+            if value then
+                spawn(function()
+                    while self._props.animation do
+                        self._object.Transparency = math.abs(math.sin(tick() * 2))
+                        wait(0.05)
+                    end
+                end)
+            end
         elseif key == "scalelock" then
             self._props[key] = value
         else
