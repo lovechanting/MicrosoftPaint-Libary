@@ -1,13 +1,5 @@
 local MicrosoftPaint = {}
 
-local colorPresets = {
-    red = {255, 0, 0}, green = {0, 255, 0}, blue = {0, 0, 255},
-    yellow = {255, 255, 0}, cyan = {0, 255, 255}, magenta = {255, 0, 255},
-    black = {0, 0, 0}, white = {255, 255, 255}, gray = {128, 128, 128},
-    pink = {255, 192, 203}, lightpink = {255, 182, 193},
-    orange = {255, 165, 0}, purple = {128, 0, 128}
-}
-
 local function hexToRGB(hex)
     hex = hex:gsub("#", "")
     return tonumber("0x" .. hex:sub(1, 2)) or 255,
@@ -15,85 +7,91 @@ local function hexToRGB(hex)
            tonumber("0x" .. hex:sub(5, 6)) or 255
 end
 
-local players = {}
-local renderDistance = 200
-
-local function createLocalPlayerEffect()
-    local circle = MicrosoftPaint.Draw("Circle")
-    circle.size = Vector2.new(50, 50)
-    circle.position = Vector2.new(0, 0)
-    circle.color = {255, 0, 0}
-    circle.animation = true
-    task.spawn(function()
-        while true do
-            local time = os.clock()
-            local scale = math.sin(time * 2) * 10 + 50
-            circle.size = Vector2.new(scale, scale)
-            local r = math.abs(math.sin(time * 1)) * 255
-            local g = math.abs(math.sin(time * 2)) * 255
-            local b = math.abs(math.sin(time * 3)) * 255
-            circle.color = {r, g, b}
-            task.wait(0.05)
-        end
-    end)
-    return circle
-end
-
-local localPlayerEffect = createLocalPlayerEffect()
-
 local ShapeMeta = {
     __index = function(self, key)
         return rawget(self._props, key)
     end,
     __newindex = function(self, key, value)
-        local props, obj, outline = self._props, self._object, self._outlineObject
-        
-        if key == "color" or key == "outlinecolor" then
+        if key == "color" then
             if type(value) == "string" then
-                props[key] = colorPresets[value:lower()] or {hexToRGB(value)}
-            elseif typeof(value) == "Color3" then
-                props[key] = {value.R * 255, value.G * 255, value.B * 255}
+                self._props[key] = {hexToRGB(value)}
             elseif type(value) == "table" and #value == 3 then
-                props[key] = value
+                self._props[key] = value
             end
-            local colorObj = Color3.fromRGB(unpack(props[key]))
-            if key == "color" then obj.Color = colorObj else outline.Color = colorObj end
+            self._object.Color = Color3.fromRGB(unpack(self._props[key]))
+        elseif key == "outlinecolor" then
+            if type(value) == "string" then
+                self._props[key] = {hexToRGB(value)}
+            elseif type(value) == "table" and #value == 3 then
+                self._props[key] = value
+            end
+            self._outlineObject.Color = Color3.fromRGB(unpack(self._props[key]))
+        elseif key == "thickness" then
+            self._props[key] = math.clamp(value, 1, 10)
+            self._object.Thickness = self._props[key]
+            self._outlineObject.Thickness = self._props[key] + self._props.outlinethickness
+        elseif key == "outlinethickness" then
+            self._props[key] = math.clamp(value, 1, 10)
+            self._outlineObject.Thickness = self._props.thickness + self._props[key]
+        elseif key == "outline" then
+            self._props[key] = value
+            self._outlineObject.Visible = value
+        elseif key == "visible" then
+            self._props[key] = value
+            self._object.Visible = value
+            self._outlineObject.Visible = value and self._props.outline
         elseif key == "position" then
-            if props.scalelock and props.player and players[props.player] then
-                props[key] = players[props.player].Position
-            else
-                props[key] = value
-            end
-            obj.Position, outline.Position = props[key], props[key]
+            self._props[key] = value
+            self._object.Position = value
+            self._outlineObject.Position = value
         elseif key == "size" then
-            if props.scalelock and props.player and players[props.player] then
-                props[key] = players[props.player].Size
-            else
-                props[key] = value
+            self._props[key] = value
+            self._object.Size = value
+            self._outlineObject.Size = value + Vector2.new(self._props.outlinethickness, self._props.outlinethickness)
+        elseif key == "zindex" then
+            self._props[key] = value
+            self._object.ZIndex = value
+            self._outlineObject.ZIndex = value - 1
+        elseif key == "transparency" then
+            self._props[key] = value
+            self._object.Transparency = value
+            self._outlineObject.Transparency = value
+        elseif key == "borderradius" then
+            self._props[key] = math.clamp(value, 0, 50)
+            self._object.Radius = self._props[key]
+        elseif key == "animation" then
+            self._props[key] = value
+            if value then
+                task.spawn(function()
+                    while self._props.animation do
+                        self._object.Transparency = math.abs(math.sin(os.clock() * 2))
+                        task.wait(0.05)
+                    end
+                end)
             end
-            obj.Size = props[key]
-            outline.Size = props[key] + Vector2.new(props.outlinethickness, props.outlinethickness)
-        elseif key == "player" then
-            props[key] = value
-            if value and players[value] then
-                props.scalelock = true
-                props.size = players[value].Size
-                obj.Size = props.size
-                outline.Size = props.size + Vector2.new(props.outlinethickness, props.outlinethickness)
-            end
+        elseif key == "scalelock" then
+            self._props[key] = value
+        elseif key == "filltransparency" then
+            self._props[key] = value
+            self._object.Filled = value < 1
+            self._object.Transparency = value
         else
-            rawset(props, key, value)
+            rawset(self._props, key, value)
         end
     end
 }
 
 local function createShape(shapeType)
-    local obj, outline = Drawing.new(shapeType), Drawing.new(shapeType)
-    outline.ZIndex, outline.Color, outline.Thickness, outline.Visible = obj.ZIndex - 1, Color3.new(0, 0, 0), obj.Thickness + 1, false
-    
+    local obj = Drawing.new(shapeType)
+    local outlineObj = Drawing.new(shapeType)
+    outlineObj.ZIndex = obj.ZIndex - 1
+    outlineObj.Color = Color3.new(0, 0, 0)
+    outlineObj.Thickness = obj.Thickness + 1
+    outlineObj.Visible = false
+
     local shape = {
         _object = obj,
-        _outlineObject = outline,
+        _outlineObject = outlineObj,
         _props = {
             visible = true,
             color = {255, 255, 255},
@@ -108,8 +106,7 @@ local function createShape(shapeType)
             borderradius = 0,
             animation = false,
             scalelock = false,
-            filltransparency = 0,
-            player = nil
+            filltransparency = 0
         }
     }
     setmetatable(shape, ShapeMeta)
@@ -123,10 +120,6 @@ function MicrosoftPaint.Draw(shapeType)
     else
         error("Invalid shape type: " .. tostring(shapeType))
     end
-end
-
-function MicrosoftPaint.UpdatePlayers(newPlayers)
-    players = newPlayers
 end
 
 return MicrosoftPaint
