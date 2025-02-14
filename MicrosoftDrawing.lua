@@ -9,7 +9,7 @@ end
 
 local ShapeMeta = {
     __index = function(self, key)
-        return rawget(self, "_props")[key]
+        return rawget(self._props, key)
     end,
     __newindex = function(self, key, value)
         if key == "color" then
@@ -31,7 +31,7 @@ local ShapeMeta = {
             self._object.Thickness = self._props[key]
         elseif key == "outlinethickness" then
             self._props[key] = math.clamp(value, 1, 10)
-            self._outlineObject.Thickness = self._props[key] + self._props.thickness
+            self._outlineObject.Thickness = self._props[key]
         elseif key == "outline" then
             self._props[key] = value
             self._outlineObject.Visible = value
@@ -41,16 +41,19 @@ local ShapeMeta = {
             self._outlineObject.Visible = value and self._props.outline
         elseif key == "position" then
             self._props[key] = value
-            if self._object.Position then
-                self._object.Position = value
-                self._outlineObject.Position = value
-            end
+            self._object.Position = value
+            self._outlineObject.Position = value - Vector2.new(self._props.outlinethickness / 2, self._props.outlinethickness / 2)
         elseif key == "size" then
             self._props[key] = value
-            if self._object.Size then
-                self._object.Size = value
-                self._outlineObject.Size = value + Vector2.new(self._props.outlinethickness, self._props.outlinethickness)
-            end
+            self._object.Size = value
+            self._outlineObject.Size = value + Vector2.new(self._props.outlinethickness, self._props.outlinethickness)
+        elseif key == "zindex" then
+            self._props[key] = value
+            self._object.ZIndex = value
+            self._outlineObject.ZIndex = value - 1
+        elseif key == "transparency" then
+            self._props[key] = value
+            self._object.Transparency = value
         else
             rawset(self._props, key, value)
         end
@@ -74,7 +77,9 @@ local function createShape(shapeType)
             outlinethickness = 1,
             outlinecolor = {0, 0, 0},
             position = Vector2.new(0, 0),
-            size = Vector2.new(100, 100)
+            size = Vector2.new(100, 100),
+            zindex = 1,
+            transparency = 1
         }
     }
     setmetatable(shape, ShapeMeta)
