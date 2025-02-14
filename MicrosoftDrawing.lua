@@ -15,6 +15,8 @@ local function hexToRGB(hex)
            tonumber("0x" .. hex:sub(5, 6)) or 255
 end
 
+local players = {}
+
 local ShapeMeta = {
     __index = function(self, key)
         return rawget(self._props, key)
@@ -82,6 +84,14 @@ local ShapeMeta = {
             props[key] = value
             obj.Filled = value < 1
             obj.Transparency = value
+        elseif key == "player" then
+            props[key] = value
+            if value and players[value] then
+                props.scalelock = true
+                props.size = players[value].Size
+                obj.Size = props.size
+                outline.Size = props.size + Vector2.new(props.outlinethickness, props.outlinethickness)
+            end
         else
             rawset(props, key, value)
         end
@@ -109,7 +119,8 @@ local function createShape(shapeType)
             borderradius = 0,
             animation = false,
             scalelock = false,
-            filltransparency = 0
+            filltransparency = 0,
+            player = nil
         }
     }
     setmetatable(shape, ShapeMeta)
@@ -123,6 +134,10 @@ function MicrosoftPaint.Draw(shapeType)
     else
         error("Invalid shape type: " .. tostring(shapeType))
     end
+end
+
+function MicrosoftPaint.UpdatePlayers(newPlayers)
+    players = newPlayers
 end
 
 return MicrosoftPaint
