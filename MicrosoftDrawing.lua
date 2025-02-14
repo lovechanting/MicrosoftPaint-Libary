@@ -1,5 +1,13 @@
 local MicrosoftPaint = {}
 
+local colorPresets = {
+    red = {255, 0, 0}, green = {0, 255, 0}, blue = {0, 0, 255},
+    yellow = {255, 255, 0}, cyan = {0, 255, 255}, magenta = {255, 0, 255},
+    black = {0, 0, 0}, white = {255, 255, 255}, gray = {128, 128, 128},
+    pink = {255, 192, 203}, lightpink = {255, 182, 193},
+    orange = {255, 165, 0}, purple = {128, 0, 128}
+}
+
 local function hexToRGB(hex)
     hex = hex:gsub("#", "")
     return tonumber("0x" .. hex:sub(1, 2)) or 255,
@@ -14,12 +22,16 @@ local ShapeMeta = {
     __newindex = function(self, key, value)
         local props, obj, outline = self._props, self._object, self._outlineObject
         
-        if key == "color" then
-            props[key] = type(value) == "string" and {hexToRGB(value)} or {value.R * 255, value.G * 255, value.B * 255}
-            obj.Color = Color3.fromRGB(unpack(props[key]))
-        elseif key == "outlinecolor" then
-            props[key] = type(value) == "string" and {hexToRGB(value)} or {value.R * 255, value.G * 255, value.B * 255}
-            outline.Color = Color3.fromRGB(unpack(props[key]))
+        if key == "color" or key == "outlinecolor" then
+            if type(value) == "string" then
+                props[key] = colorPresets[value:lower()] or {hexToRGB(value)}
+            elseif typeof(value) == "Color3" then
+                props[key] = {value.R * 255, value.G * 255, value.B * 255}
+            elseif type(value) == "table" and #value == 3 then
+                props[key] = value
+            end
+            local colorObj = Color3.fromRGB(unpack(props[key]))
+            if key == "color" then obj.Color = colorObj else outline.Color = colorObj end
         elseif key == "thickness" then
             props[key] = math.clamp(value, 1, 10)
             obj.Thickness = props[key]
