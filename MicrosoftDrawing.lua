@@ -15,10 +15,10 @@ local ShapeMeta = {
         local props, obj, outline = self._props, self._object, self._outlineObject
         
         if key == "color" then
-            props[key] = type(value) == "string" and {hexToRGB(value)} or value
+            props[key] = type(value) == "string" and {hexToRGB(value)} or {value.R * 255, value.G * 255, value.B * 255}
             obj.Color = Color3.fromRGB(unpack(props[key]))
         elseif key == "outlinecolor" then
-            props[key] = type(value) == "string" and {hexToRGB(value)} or value
+            props[key] = type(value) == "string" and {hexToRGB(value)} or {value.R * 255, value.G * 255, value.B * 255}
             outline.Color = Color3.fromRGB(unpack(props[key]))
         elseif key == "thickness" then
             props[key] = math.clamp(value, 1, 10)
