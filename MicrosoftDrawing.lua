@@ -56,6 +56,19 @@ local ShapeMeta = {
             self._props[key] = value
             self._object.Transparency = value
             self._outlineObject.Transparency = value
+        elseif key == "borderradius" then
+            self._props[key] = math.clamp(value, 0, 50)
+            self._object.Radius = self._props[key]
+        elseif key == "animation" then
+            self._props[key] = value
+            spawn(function()
+                while self._props.animation do
+                    self._object.Transparency = math.abs(math.sin(tick() * 2))
+                    wait(0.05)
+                end
+            end)
+        elseif key == "scalelock" then
+            self._props[key] = value
         else
             rawset(self._props, key, value)
         end
@@ -83,7 +96,10 @@ local function createShape(shapeType)
             position = Vector2.new(0, 0),
             size = Vector2.new(100, 100),
             zindex = 1,
-            transparency = 1
+            transparency = 1,
+            borderradius = 0,
+            animation = false,
+            scalelock = false
         }
     }
     setmetatable(shape, ShapeMeta)
